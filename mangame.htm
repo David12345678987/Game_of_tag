@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="im/p1.png" sizes="48x48">
+    <title>Game of tag</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #game-container {
+            width: 80vw;
+            height: 100vh;
+            background-color: rgb(18, 116, 18);
+            position: relative;
+            float: left;
+        }
+
+        #player {
+            width: 30px;
+            height: 30px;
+            background-color: rgb(10, 50, 126);
+            position: absolute;
+        }
+
+        .enemy {
+            width: 30px;
+            height: 30px;
+            background-color: rgb(207, 9, 9);
+            position: absolute;
+        }
+
+        #play-again {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 40%;
+            font-size: 30px;
+            transform: translate(-50%, -50%);
+            height: 100px;
+            width: 180px;
+            border-radius: 10px;
+            background-color: #0241ca;
+        }
+
+        #timer {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            color: white;
+        }
+
+        #sidebar {
+            width: 20vw;
+            height: 100vh;
+            background-color: #333;
+            color: white;
+            position: relative;
+            float: left;
+        }
+
+        #high-score {
+            font-size: 18px;
+            padding: 20px;
+        }
+
+        #name-input {
+            font-size: 16px;
+            padding: 10px;
+            margin: 10px;
+        }
+
+        #name-display {
+            font-size: 16px;
+            padding: 10px;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="player"></div>
+    </div>
+    <button id="play-again">Play Again</button>
+    <div id="timer">Survival Time: 0 seconds</div>
+
+    <div id="sidebar">
+        <div id="high-score">High Score: 0 seconds</div>
+        <input id="name-input" type="text" placeholder="Enter your name">
+        <div id="name-display"></div>
+    </div>
+
+    <script>
+        const player = document.getElementById("player");
+        const gameContainer = document.getElementById("game-container");
+        const playAgainButton = document.getElementById("play-again");
+        const timerDisplay = document.getElementById("timer");
+        const highScoreDisplay = document.getElementById("high-score");
+        const nameInput = document.getElementById("name-input");
+        const nameDisplay = document.getElementById("name-display");
+
+        let playerX = gameContainer.clientWidth / 2 - player.clientWidth / 2;
+        let playerY = gameContainer.clientHeight / 2 - player.clientHeight / 2;
+
+        player.style.left = playerX + "px";
+        player.style.top = playerY + "px";
+
+        let enemies = [];
+        let gameRunning = true;
+        let survivalTime = 0;
+        let timerInterval;
+
+        // Load high score and name from localStorage
+        let highScoreData = JSON.parse(localStorage.getItem("highScoreData")) || { name: "", score: 0 };
+        highScoreDisplay.textContent = `High Score: ${highScoreData.score} seconds`;
+        nameInput.value = highScoreData.name;
+        updateNameDisplay(highScoreData.name);
+
+        function createEnemy() {
+            if (!gameRunning) return;
+
+            const enemy = document.createElement("div");
+            enemy.className = "enemy";
+
+            enemy.style.left = Math.random() * (gameContainer.clientWidth - enemy.clientWidth) + "px";
+            enemy.style.top = Math.random() * (gameContainer.clientHeight - enemy.clientHeight) + "px";
+            gameContainer.appendChild(enemy);
+            enemies.push(enemy);
+
+            moveEnemy(enemy);
+        }
+
+        function movePlayer(event) {
+            if (!gameRunning) return;
+
+            const speed = 10;
+            const key = event.key.toLowerCase();
+            switch (key) {
+                case "w":
+                    playerY -= speed;
+                    break;
+                case "s":
+                    playerY += speed;
+                    break;
+                case "a":
+                    playerX -= speed;
+                    break;
+                case "d":
+                    playerX += speed;
+                    break;
+            }
+
+            // Ensure the player stays within the game container
+            playerX = Math.max(0, Math.min(playerX, gameContainer.clientWidth - player.clientWidth));
+            playerY = Math.max(0, Math.min(playerY, gameContainer.clientHeight - player.clientHeight));
+
+            player.style.left = playerX + "px";
+            player.style.top = playerY + "px";
+        }
+
+        function moveEnemy(enemy) {
+            if (!gameRunning) return;
+
+            const enemyRect = enemy.getBoundingClientRect();
+            const enemyX = enemyRect.left + enemyRect.width / 2;
+            const enemyY = enemyRect.top + enemyRect.height / 2;
+
+            const targetX = playerX + player.clientWidth / 2;
+            const targetY = playerY + player.clientHeight / 2;
+
+            const angle = Math.atan2(targetY - enemyY, targetX - enemyX);
+            const speed = 1; // Adjust the speed as needed
+
+            const velocityX = Math.cos(angle) * speed;
+            const velocityY = Math.sin(angle) * speed;
+
+            let newX = enemyRect.left + velocityX;
+            let newY = enemyRect.top + velocityY;
+
+            // Check for collisions with the player
+            const playerRect = player.getBoundingClientRect();
+            if (
+                newX < playerRect.right &&
+                newX + enemyRect.width > playerRect.left &&
+                newY < playerRect.bottom &&
+                newY + enemyRect.height > playerRect.top
+            ) {
+                gameOver();
+                return;
+            }
+
+            // Check for collisions with the green walls and adjust the position accordingly
+            if (newX < 0 || newX + enemyRect.width > gameContainer.clientWidth || newY < 0 || newY + enemyRect.height > gameContainer.clientHeight) {
+                newX = enemyRect.left;
+                newY = enemyRect.top;
+            }
+
+            enemy.style.left = newX + "px";
+            enemy.style.top = newY + "px";
+
+            requestAnimationFrame(() => moveEnemy(enemy));
+        }
+
+        function updateTimer() {
+            survivalTime++;
+            timerDisplay.textContent = `Survival Time: ${survivalTime} seconds`;
+        }
+
+        function updateNameDisplay(name) {
+            nameDisplay.textContent = `Name: ${name}`;
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            clearInterval(timerInterval);
+            playAgainButton.style.display = "block";
+
+            // Update high score and name if needed
+            if (survivalTime > highScoreData.score) {
+                highScoreData.name = nameInput.value;
+                highScoreData.score = survivalTime;
+                highScoreDisplay.textContent = `High Score: ${highScoreData.score} seconds`;
+                localStorage.setItem("highScoreData", JSON.stringify(highScoreData));
+                updateNameDisplay(highScoreData.name);
+            }
+
+            playAgainButton.addEventListener("click", resetGame);
+        }
+
+        function resetGame() {
+            playAgainButton.style.display = "none";
+            playerX = gameContainer.clientWidth / 2 - player.clientWidth / 2;
+            playerY = gameContainer.clientHeight / 2 - player.clientHeight / 2;
+            player.style.left = playerX + "px";
+            player.style.top = playerY + "px";
+
+            // Remove all enemies
+            for (let i = 0; i < enemies.length; i++) {
+                gameContainer.removeChild(enemies[i]);
+            }
+            enemies = [];
+
+            survivalTime = 0;
+            timerDisplay.textContent = "Survival Time: 0 seconds";
+
+            gameRunning = true;
+            timerInterval = setInterval(updateTimer, 1000); // Update the timer every second
+        }
+
+        function startGame() {
+            createEnemy();
+            setInterval(createEnemy, 2000); // Spawn enemies every 2 seconds
+            timerInterval = setInterval(updateTimer, 1000); // Start the timer
+        }
+
+        window.addEventListener("keydown", movePlayer);
+        startGame();
+    </script>
+</body>
+</html>
