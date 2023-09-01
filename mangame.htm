@@ -238,6 +238,67 @@
             player.style.left = playerX + "px";
             player.style.top = playerY + "px";
 
+
+
+
+
+
+                        function submitHighScore(name, score) {
+                fetch('/api/high-scores', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name, score }),
+                })
+                .then(response => {
+                    if (response.ok) {
+                    console.log('High score submitted successfully');
+                    // Refresh the leaderboard from the server after submitting
+                    getLeaderboard();
+                    } else {
+                    console.error('Failed to submit high score');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+
+            function loadLeaderboard() {
+                // Fetch the leaderboard from the server
+                getLeaderboard();
+            }
+
+            function getLeaderboard() {
+                fetch('/api/high-scores')
+                .then(response => response.json())
+                .then(data => {
+                    // Sort high scores by score (descending order)
+                    data.sort((a, b) => b.score - a.score);
+
+                    // Display the high scores on the sidebar
+                    const highScoreList = document.getElementById('high-score');
+                    highScoreList.innerHTML = 'High Scores:<br>';
+                    data.forEach((entry, index) => {
+                    highScoreList.innerHTML += `${index + 1}. ${entry.name}: ${entry.score} seconds<br>`;
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+
+            // Call loadLeaderboard() when the page loads to load the initial leaderboard
+            loadLeaderboard();
+
+
+
+
+
+
+
+
             // Remove all enemies
             for (let i = 0; i < enemies.length; i++) {
                 gameContainer.removeChild(enemies[i]);
@@ -259,6 +320,8 @@
 
         window.addEventListener("keydown", movePlayer);
         startGame();
+
+        
     </script>
 </body>
 </html>
