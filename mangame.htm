@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="im/p2.png" sizes="48x48">
+    <link rel="icon" href="im/p1.png" sizes="48x48">
     <title>Game of tag</title>
     <style>
         body {
@@ -63,7 +63,7 @@
             float: left;
         }
 
-        #high-score {
+        #high-scores {
             font-size: 18px;
             padding: 20px;
         }
@@ -89,7 +89,7 @@
     <div id="timer">Survival Time: 0 seconds</div>
 
     <div id="sidebar">
-        <div id="high-score">High Score: 0 seconds</div>
+        <div id="high-scores">High Scores:</div>
         <input id="name-input" type="text" placeholder="Enter your name">
         <div id="name-display"></div>
     </div>
@@ -99,7 +99,7 @@
         const gameContainer = document.getElementById("game-container");
         const playAgainButton = document.getElementById("play-again");
         const timerDisplay = document.getElementById("timer");
-        const highScoreDisplay = document.getElementById("high-score");
+        const highScoreDisplay = document.getElementById("high-scores");
         const nameInput = document.getElementById("name-input");
         const nameDisplay = document.getElementById("name-display");
 
@@ -115,11 +115,8 @@
         let timerInterval;
         let isVisible = true;
 
-        // Load high score and name from localStorage
-        let highScoreData = JSON.parse(localStorage.getItem("highScoreData")) || { name: "", score: 0 };
-        highScoreDisplay.textContent = `High Score: ${highScoreData.score} seconds`;
-        nameInput.value = highScoreData.name;
-        updateNameDisplay(highScoreData.name);
+        // Load high scores from localStorage
+        let highScores = JSON.parse(localStorage.getItem("highScores")) || [];
 
         function createEnemy() {
             if (!gameRunning) return;
@@ -127,12 +124,24 @@
             const enemy = document.createElement("div");
             enemy.className = "enemy";
 
-            enemy.style.left = Math.random() * (gameContainer.clientWidth - enemy.clientWidth) + "px";
-            enemy.style.top = Math.random() * (gameContainer.clientHeight - enemy.clientHeight) + "px";
+            let enemyX, enemyY;
+            do {
+                enemyX = Math.random() * (gameContainer.clientWidth - enemy.clientWidth);
+                enemyY = Math.random() * (gameContainer.clientHeight - enemy.clientHeight);
+            } while (distanceBetween(playerX, playerY, enemyX, enemyY) < 100);
+
+            enemy.style.left = enemyX + "px";
+            enemy.style.top = enemyY + "px";
             gameContainer.appendChild(enemy);
             enemies.push(enemy);
 
             moveEnemy(enemy);
+        }
+
+        function distanceBetween(x1, y1, x2, y2) {
+            const dx = x1 - x2;
+            const dy = y1 - y2;
+            return Math.sqrt(dx * dx + dy * dy);
         }
 
         function movePlayer(event) {
@@ -207,14 +216,20 @@
         }
 
         function updateTimer() {
-            if (isVisible) {
+            if (gameRunning && isVisible) {
                 survivalTime++;
                 timerDisplay.textContent = `Survival Time: ${survivalTime} seconds`;
             }
         }
 
-        function updateNameDisplay(name) {
-            nameDisplay.textContent = `Name: ${name}`;
+        function displayHighScores() {
+            highScoreDisplay.innerHTML = "High Scores:<br>";
+            highScores
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 6) // Display the top score and the previous five higher scores
+                .forEach((entry, index) => {
+                    highScoreDisplay.innerHTML += `${index + 1}. ${entry.name}: ${entry.score} seconds<br>`;
+                });
         }
 
         function gameOver() {
@@ -222,14 +237,12 @@
             clearInterval(timerInterval);
             playAgainButton.style.display = "block";
 
-            // Update high score and name if needed
-            if (survivalTime > highScoreData.score) {
-                highScoreData.name = nameInput.value;
-                highScoreData.score = survivalTime;
-                highScoreDisplay.textContent = `High Score: ${highScoreData.score} seconds`;
-                localStorage.setItem("highScoreData", JSON.stringify(highScoreData));
-                updateNameDisplay(highScoreData.name);
-            }
+            // Update high scores and display them
+            highScores.push({ name: nameInput.value, score: survivalTime });
+            highScores.sort((a, b) => b.score - a.score);
+            highScores = highScores.slice(0, 10); // Keep only the top 10 scores
+            localStorage.setItem("highScores", JSON.stringify(highScores));
+            displayHighScores();
 
             playAgainButton.addEventListener("click", resetGame);
         }
@@ -252,12 +265,16 @@
 
             gameRunning = true;
             timerInterval = setInterval(updateTimer, 1000); // Update the timer every second
+
+            nameInput.value = "";
+            updateNameDisplay("");
         }
 
         function startGame() {
             createEnemy();
             setInterval(createEnemy, 2000); // Spawn enemies every 2 seconds
             timerInterval = setInterval(updateTimer, 1000); // Start the timer
+            displayHighScores();
         }
 
         // Pause the game when the tab is not active
