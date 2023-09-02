@@ -33,6 +33,13 @@
             position: absolute;
         }
 
+        .pink-enemy {
+            width: 30px;
+            height: 30px;
+            background-color: rgb(255, 115, 139); /* Pink color */
+            position: absolute;
+        }
+
         #play-again {
             display: none;
             position: absolute;
@@ -64,18 +71,19 @@
         }
 
         #high-scores {
-            font-size: 18px;
-            padding: 20px;
+            font-size: 19px;
+            padding: 10px;
+            color: #fafafa;
         }
 
         #name-input {
-            font-size: 16px;
+            font-size: 14px;
             padding: 10px;
             margin: 10px;
         }
 
         #name-display {
-            font-size: 16px;
+            font-size: 18px;
             padding: 10px;
             margin: 10px;
         }
@@ -114,6 +122,8 @@
         let survivalTime = 0;
         let timerInterval;
         let isVisible = true;
+        let redSquareCount = 0; // Counter for red squares
+        let pinkSquarePercentage = 2; // Percentage of pink squares among red squares (starts at 5%)
 
         // Load high scores from localStorage
         let highScores = JSON.parse(localStorage.getItem("highScores")) || [];
@@ -130,6 +140,11 @@
             if (gameRunning) { // Only create enemies when the game is running
                 const enemy = document.createElement("div");
                 enemy.className = "enemy";
+                redSquareCount++; // Increment the counter for red squares
+
+                if (redSquareCount >= 80 && Math.random() * 80 <= pinkSquarePercentage) {
+                    enemy.className = "pink-enemy";
+                }
 
                 let enemyX, enemyY;
                 do {
@@ -142,7 +157,7 @@
                 gameContainer.appendChild(enemy);
                 enemies.push(enemy);
 
-                moveEnemy(enemy);
+                moveEnemy(enemy, enemy.className === "pink-enemy" ? 2 : 1); // Pink squares move at twice the speed
             }
         }
 
@@ -152,21 +167,61 @@
             return Math.sqrt(dx * dx + dy * dy);
         }
 
+
+
+
+
+        // Add event listeners for arrow key controls for the blue square
+        window.addEventListener("keydown", function(event) {
+            if (gameRunning) {
+                const speed = 10;
+                switch (event.key) {
+                    case "ArrowUp":
+                        playerY -= speed;
+                        break;
+                    case "ArrowDown":
+                        playerY += speed;
+                        break;
+                    case "ArrowLeft":
+                        playerX -= speed;
+                        break;
+                    case "ArrowRight":
+                        playerX += speed;
+                        break;
+                }
+
+                // Ensure the player stays within the game container
+                playerX = Math.max(0, Math.min(playerX, gameContainer.clientWidth - player.clientWidth));
+                playerY = Math.max(0, Math.min(playerY, gameContainer.clientHeight - player.clientHeight));
+
+                player.style.left = playerX + "px";
+                player.style.top = playerY + "px";
+            }
+        });
+
+
+
+
+
         function movePlayer(event) {
             if (gameRunning) {
                 const speed = 10;
                 const key = event.key.toLowerCase();
                 switch (key) {
                     case "w":
+                    
                         playerY -= speed;
                         break;
                     case "s":
+                   
                         playerY += speed;
                         break;
                     case "a":
+                    
                         playerX -= speed;
                         break;
                     case "d":
+                   
                         playerX += speed;
                         break;
                 }
@@ -180,7 +235,7 @@
             }
         }
 
-        function moveEnemy(enemy) {
+        function moveEnemy(enemy, speedMultiplier) {
             if (gameRunning) {
                 const enemyRect = enemy.getBoundingClientRect();
                 const enemyX = enemyRect.left + enemyRect.width / 2;
@@ -190,7 +245,7 @@
                 const targetY = playerY + player.clientHeight / 2;
 
                 const angle = Math.atan2(targetY - enemyY, targetX - enemyX);
-                const speed = 1; // Adjust the speed as needed
+                const speed = 1 * speedMultiplier; // Adjust the speed as needed
 
                 const velocityX = Math.cos(angle) * speed;
                 const velocityY = Math.sin(angle) * speed;
@@ -219,7 +274,7 @@
                 enemy.style.left = newX + "px";
                 enemy.style.top = newY + "px";
 
-                requestAnimationFrame(() => moveEnemy(enemy));
+                requestAnimationFrame(() => moveEnemy(enemy, speedMultiplier));
             }
         }
 
@@ -247,6 +302,8 @@
             clearInterval(timerInterval);
             playAgainButton.style.display = "block";
             isVisible = false;
+            redSquareCount = 0; // Reset red square count
+            pinkSquarePercentage = 5; // Reset pink square percentage
 
             // Update high scores
             if (survivalTime > 0) {
@@ -282,7 +339,14 @@
 
         function startGame() {
             resetGame(); // Start the game as soon as the page loads
-            setInterval(createEnemy, 2000); // Spawn enemies every 2 seconds
+            setInterval(createEnemy, 1000); // Spawn enemies every 1 second (frequent spawning)
+            setInterval(increasePinkSquarePercentage, 5000); // Increase pink square percentage every 5 seconds
+        }
+
+        function increasePinkSquarePercentage() {
+            if (gameRunning) {
+                pinkSquarePercentage += 5; // Increase pink square percentage by 5%
+            }
         }
 
         window.addEventListener("keydown", movePlayer);
