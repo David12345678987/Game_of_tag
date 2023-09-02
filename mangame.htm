@@ -113,6 +113,7 @@
         let gameRunning = true;
         let survivalTime = 0;
         let timerInterval;
+        let isVisible = true;
 
         // Load high score and name from localStorage
         let highScoreData = JSON.parse(localStorage.getItem("highScoreData")) || { name: "", score: 0 };
@@ -206,8 +207,10 @@
         }
 
         function updateTimer() {
-            survivalTime++;
-            timerDisplay.textContent = `Survival Time: ${survivalTime} seconds`;
+            if (isVisible) {
+                survivalTime++;
+                timerDisplay.textContent = `Survival Time: ${survivalTime} seconds`;
+            }
         }
 
         function updateNameDisplay(name) {
@@ -238,67 +241,6 @@
             player.style.left = playerX + "px";
             player.style.top = playerY + "px";
 
-
-
-
-
-
-                        function submitHighScore(name, score) {
-                fetch('/api/high-scores', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ name, score }),
-                })
-                .then(response => {
-                    if (response.ok) {
-                    console.log('High score submitted successfully');
-                    // Refresh the leaderboard from the server after submitting
-                    getLeaderboard();
-                    } else {
-                    console.error('Failed to submit high score');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-            }
-
-            function loadLeaderboard() {
-                // Fetch the leaderboard from the server
-                getLeaderboard();
-            }
-
-            function getLeaderboard() {
-                fetch('/api/high-scores')
-                .then(response => response.json())
-                .then(data => {
-                    // Sort high scores by score (descending order)
-                    data.sort((a, b) => b.score - a.score);
-
-                    // Display the high scores on the sidebar
-                    const highScoreList = document.getElementById('high-score');
-                    highScoreList.innerHTML = 'High Scores:<br>';
-                    data.forEach((entry, index) => {
-                    highScoreList.innerHTML += `${index + 1}. ${entry.name}: ${entry.score} seconds<br>`;
-                    });
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-            }
-
-            // Call loadLeaderboard() when the page loads to load the initial leaderboard
-            loadLeaderboard();
-
-
-
-
-
-
-
-
             // Remove all enemies
             for (let i = 0; i < enemies.length; i++) {
                 gameContainer.removeChild(enemies[i]);
@@ -318,10 +260,19 @@
             timerInterval = setInterval(updateTimer, 1000); // Start the timer
         }
 
+        // Pause the game when the tab is not active
+        document.addEventListener("visibilitychange", function () {
+            if (document.hidden) {
+                isVisible = false;
+                clearInterval(timerInterval);
+            } else {
+                isVisible = true;
+                timerInterval = setInterval(updateTimer, 1000); // Resume the timer
+            }
+        });
+
         window.addEventListener("keydown", movePlayer);
         startGame();
-
-        
     </script>
 </body>
 </html>
