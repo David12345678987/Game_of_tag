@@ -117,6 +117,14 @@
 
         // Load high scores from localStorage
         let highScores = JSON.parse(localStorage.getItem("highScores")) || [];
+        displayHighScores();
+
+        // Load the last entered name from localStorage
+        let lastEnteredName = localStorage.getItem("lastEnteredName");
+        if (lastEnteredName) {
+            nameInput.value = lastEnteredName;
+            updateNameDisplay(lastEnteredName);
+        }
 
         function createEnemy() {
             if (!gameRunning) return;
@@ -216,20 +224,21 @@
         }
 
         function updateTimer() {
-            if (gameRunning && isVisible) {
+            if (gameRunning) {
                 survivalTime++;
                 timerDisplay.textContent = `Survival Time: ${survivalTime} seconds`;
             }
         }
 
+        function updateNameDisplay(name) {
+            nameDisplay.textContent = `Name: ${name}`;
+        }
+
         function displayHighScores() {
             highScoreDisplay.innerHTML = "High Scores:<br>";
-            highScores
-                .sort((a, b) => b.score - a.score)
-                .slice(0, 6) // Display the top score and the previous five higher scores
-                .forEach((entry, index) => {
-                    highScoreDisplay.innerHTML += `${index + 1}. ${entry.name}: ${entry.score} seconds<br>`;
-                });
+            highScores.slice(0, 6).forEach((entry, index) => {
+                highScoreDisplay.innerHTML += `${index + 1}. ${entry.name}: ${entry.score} seconds<br>`;
+            });
         }
 
         function gameOver() {
@@ -266,8 +275,8 @@
             gameRunning = true;
             timerInterval = setInterval(updateTimer, 1000); // Update the timer every second
 
-            nameInput.value = "";
-            updateNameDisplay("");
+            // Save the last entered name to localStorage
+            localStorage.setItem("lastEnteredName", nameInput.value);
         }
 
         function startGame() {
