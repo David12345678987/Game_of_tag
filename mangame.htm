@@ -142,7 +142,7 @@
                 enemy.className = "enemy";
                 redSquareCount++; // Increment the counter for red squares
 
-                if (redSquareCount >= 80 && Math.random() * 80 <= pinkSquarePercentage) {
+                if (redSquareCount >= 110 && Math.random() * 200 <= pinkSquarePercentage) {
                     enemy.className = "pink-enemy";
                 }
 
@@ -150,7 +150,7 @@
                 do {
                     enemyX = Math.random() * (gameContainer.clientWidth - enemy.clientWidth);
                     enemyY = Math.random() * (gameContainer.clientHeight - enemy.clientHeight);
-                } while (distanceBetween(playerX, playerY, enemyX, enemyY) < 100);
+                } while (distanceBetween(playerX, playerY, enemyX, enemyY) < 110);
 
                 enemy.style.left = enemyX + "px";
                 enemy.style.top = enemyY + "px";
