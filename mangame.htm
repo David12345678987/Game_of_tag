@@ -89,7 +89,7 @@
     <div id="timer">Survival Time: 0 seconds</div>
 
     <div id="sidebar">
-        <div id="high-scores">High Scores:</div>
+        <div id="high-scores">High Scores:<br></div>
         <input id="name-input" type="text" placeholder="Enter your name">
         <div id="name-display"></div>
     </div>
@@ -110,7 +110,7 @@
         player.style.top = playerY + "px";
 
         let enemies = [];
-        let gameRunning = true;
+        let gameRunning = false; // Start the game as not running
         let survivalTime = 0;
         let timerInterval;
         let isVisible = true;
@@ -127,23 +127,23 @@
         }
 
         function createEnemy() {
-            if (!gameRunning) return;
+            if (gameRunning) { // Only create enemies when the game is running
+                const enemy = document.createElement("div");
+                enemy.className = "enemy";
 
-            const enemy = document.createElement("div");
-            enemy.className = "enemy";
+                let enemyX, enemyY;
+                do {
+                    enemyX = Math.random() * (gameContainer.clientWidth - enemy.clientWidth);
+                    enemyY = Math.random() * (gameContainer.clientHeight - enemy.clientHeight);
+                } while (distanceBetween(playerX, playerY, enemyX, enemyY) < 100);
 
-            let enemyX, enemyY;
-            do {
-                enemyX = Math.random() * (gameContainer.clientWidth - enemy.clientWidth);
-                enemyY = Math.random() * (gameContainer.clientHeight - enemy.clientHeight);
-            } while (distanceBetween(playerX, playerY, enemyX, enemyY) < 100);
+                enemy.style.left = enemyX + "px";
+                enemy.style.top = enemyY + "px";
+                gameContainer.appendChild(enemy);
+                enemies.push(enemy);
 
-            enemy.style.left = enemyX + "px";
-            enemy.style.top = enemyY + "px";
-            gameContainer.appendChild(enemy);
-            enemies.push(enemy);
-
-            moveEnemy(enemy);
+                moveEnemy(enemy);
+            }
         }
 
         function distanceBetween(x1, y1, x2, y2) {
@@ -153,105 +153,108 @@
         }
 
         function movePlayer(event) {
-            if (!gameRunning) return;
+            if (gameRunning) {
+                const speed = 10;
+                const key = event.key.toLowerCase();
+                switch (key) {
+                    case "w":
+                        playerY -= speed;
+                        break;
+                    case "s":
+                        playerY += speed;
+                        break;
+                    case "a":
+                        playerX -= speed;
+                        break;
+                    case "d":
+                        playerX += speed;
+                        break;
+                }
 
-            const speed = 10;
-            const key = event.key.toLowerCase();
-            switch (key) {
-                case "w":
-                    playerY -= speed;
-                    break;
-                case "s":
-                    playerY += speed;
-                    break;
-                case "a":
-                    playerX -= speed;
-                    break;
-                case "d":
-                    playerX += speed;
-                    break;
+                // Ensure the player stays within the game container
+                playerX = Math.max(0, Math.min(playerX, gameContainer.clientWidth - player.clientWidth));
+                playerY = Math.max(0, Math.min(playerY, gameContainer.clientHeight - player.clientHeight));
+
+                player.style.left = playerX + "px";
+                player.style.top = playerY + "px";
             }
-
-            // Ensure the player stays within the game container
-            playerX = Math.max(0, Math.min(playerX, gameContainer.clientWidth - player.clientWidth));
-            playerY = Math.max(0, Math.min(playerY, gameContainer.clientHeight - player.clientHeight));
-
-            player.style.left = playerX + "px";
-            player.style.top = playerY + "px";
         }
 
         function moveEnemy(enemy) {
-            if (!gameRunning) return;
+            if (gameRunning) {
+                const enemyRect = enemy.getBoundingClientRect();
+                const enemyX = enemyRect.left + enemyRect.width / 2;
+                const enemyY = enemyRect.top + enemyRect.height / 2;
 
-            const enemyRect = enemy.getBoundingClientRect();
-            const enemyX = enemyRect.left + enemyRect.width / 2;
-            const enemyY = enemyRect.top + enemyRect.height / 2;
+                const targetX = playerX + player.clientWidth / 2;
+                const targetY = playerY + player.clientHeight / 2;
 
-            const targetX = playerX + player.clientWidth / 2;
-            const targetY = playerY + player.clientHeight / 2;
+                const angle = Math.atan2(targetY - enemyY, targetX - enemyX);
+                const speed = 1; // Adjust the speed as needed
 
-            const angle = Math.atan2(targetY - enemyY, targetX - enemyX);
-            const speed = 1; // Adjust the speed as needed
+                const velocityX = Math.cos(angle) * speed;
+                const velocityY = Math.sin(angle) * speed;
 
-            const velocityX = Math.cos(angle) * speed;
-            const velocityY = Math.sin(angle) * speed;
+                let newX = enemyRect.left + velocityX;
+                let newY = enemyRect.top + velocityY;
 
-            let newX = enemyRect.left + velocityX;
-            let newY = enemyRect.top + velocityY;
+                // Check for collisions with the player
+                const playerRect = player.getBoundingClientRect();
+                if (
+                    newX < playerRect.right &&
+                    newX + enemyRect.width > playerRect.left &&
+                    newY < playerRect.bottom &&
+                    newY + enemyRect.height > playerRect.top
+                ) {
+                    gameOver();
+                    return;
+                }
 
-            // Check for collisions with the player
-            const playerRect = player.getBoundingClientRect();
-            if (
-                newX < playerRect.right &&
-                newX + enemyRect.width > playerRect.left &&
-                newY < playerRect.bottom &&
-                newY + enemyRect.height > playerRect.top
-            ) {
-                gameOver();
-                return;
+                // Check for collisions with the green walls and adjust the position accordingly
+                if (newX < 0 || newX + enemyRect.width > gameContainer.clientWidth || newY < 0 || newY + enemyRect.height > gameContainer.clientHeight) {
+                    newX = enemyRect.left;
+                    newY = enemyRect.top;
+                }
+
+                enemy.style.left = newX + "px";
+                enemy.style.top = newY + "px";
+
+                requestAnimationFrame(() => moveEnemy(enemy));
             }
-
-            // Check for collisions with the green walls and adjust the position accordingly
-            if (newX < 0 || newX + enemyRect.width > gameContainer.clientWidth || newY < 0 || newY + enemyRect.height > gameContainer.clientHeight) {
-                newX = enemyRect.left;
-                newY = enemyRect.top;
-            }
-
-            enemy.style.left = newX + "px";
-            enemy.style.top = newY + "px";
-
-            requestAnimationFrame(() => moveEnemy(enemy));
         }
 
         function updateTimer() {
             if (gameRunning) {
-                survivalTime++;
-                timerDisplay.textContent = `Survival Time: ${survivalTime} seconds`;
+                survivalTime += 0.01; // Increase the timer by 0.01 seconds (10 milliseconds)
+                timerDisplay.textContent = `Survival Time: ${survivalTime.toFixed(2)} seconds`;
             }
+        }
+
+        function displayHighScores() {
+            highScores.sort((a, b) => b.score - a.score);
+            highScoreDisplay.innerHTML = "High Scores:<br>";
+            highScores.slice(0, 5).forEach((entry, index) => {
+                highScoreDisplay.innerHTML += `${index + 1}. ${entry.name}: ${entry.score.toFixed(2)} seconds<br>`;
+            });
         }
 
         function updateNameDisplay(name) {
             nameDisplay.textContent = `Name: ${name}`;
         }
 
-        function displayHighScores() {
-            highScoreDisplay.innerHTML = "High Scores:<br>";
-            highScores.slice(0, 6).forEach((entry, index) => {
-                highScoreDisplay.innerHTML += `${index + 1}. ${entry.name}: ${entry.score} seconds<br>`;
-            });
-        }
-
         function gameOver() {
             gameRunning = false;
             clearInterval(timerInterval);
             playAgainButton.style.display = "block";
+            isVisible = false;
 
-            // Update high scores and display them
-            highScores.push({ name: nameInput.value, score: survivalTime });
-            highScores.sort((a, b) => b.score - a.score);
-            highScores = highScores.slice(0, 10); // Keep only the top 10 scores
-            localStorage.setItem("highScores", JSON.stringify(highScores));
-            displayHighScores();
+            // Update high scores
+            if (survivalTime > 0) {
+                const name = nameInput.value || "Anonymous";
+                highScores.push({ name, score: survivalTime });
+                localStorage.setItem("highScores", JSON.stringify(highScores));
+                displayHighScores();
+            }
 
             playAgainButton.addEventListener("click", resetGame);
         }
@@ -270,35 +273,39 @@
             enemies = [];
 
             survivalTime = 0;
-            timerDisplay.textContent = "Survival Time: 0 seconds";
+            timerDisplay.textContent = "Survival Time: 0.00 seconds";
 
             gameRunning = true;
-            timerInterval = setInterval(updateTimer, 1000); // Update the timer every second
-
-            // Save the last entered name to localStorage
-            localStorage.setItem("lastEnteredName", nameInput.value);
+            isVisible = true;
+            timerInterval = setInterval(updateTimer, 10); // Update the timer every 10 milliseconds for millisecond precision
         }
 
         function startGame() {
-            createEnemy();
+            resetGame(); // Start the game as soon as the page loads
             setInterval(createEnemy, 2000); // Spawn enemies every 2 seconds
-            timerInterval = setInterval(updateTimer, 1000); // Start the timer
-            displayHighScores();
         }
-
-        // Pause the game when the tab is not active
-        document.addEventListener("visibilitychange", function () {
-            if (document.hidden) {
-                isVisible = false;
-                clearInterval(timerInterval);
-            } else {
-                isVisible = true;
-                timerInterval = setInterval(updateTimer, 1000); // Resume the timer
-            }
-        });
 
         window.addEventListener("keydown", movePlayer);
         startGame();
+
+        // Function to handle tab visibility change
+        document.addEventListener("visibilitychange", function () {
+            if (document.hidden) {
+                // Tab is hidden, pause the game
+                clearInterval(timerInterval);
+                gameRunning = false;
+            } else if (isVisible) {
+                // Tab is visible and game is not already running, restart the game
+                resetGame();
+            }
+        });
+
+        // Function to handle input name change
+        nameInput.addEventListener("input", function () {
+            const name = nameInput.value;
+            updateNameDisplay(name);
+            localStorage.setItem("lastEnteredName", name);
+        });
     </script>
 </body>
 </html>
